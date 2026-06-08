@@ -1,11 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TaskForm from './components/TaskForm'
 import FilterTabs from './components/FilterTabs'
+import TaskList from './components/TaskList'
 import './App.css'
 
+const STORAGE_KEY = 'taskManager.tasks'
+
+function loadTasks() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
 function App() {
-  const [tasks, setTasks] = useState([])
+  const [tasks, setTasks] = useState(loadTasks)
   const [filter, setFilter] = useState('all')
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+  }, [tasks])
 
   function addTask(title, priority) {
     const newTask = {
@@ -49,20 +65,11 @@ function App() {
         remainingCount={remainingCount}
       />
 
-      {/* Temporary inline list - replaced by TaskList/TaskItem in next todo */}
-      <ul>
-        {visibleTasks.map((task) => (
-          <li key={task.id}>
-            <input
-              type="checkbox"
-              checked={task.completed}
-              onChange={() => toggleTask(task.id)}
-            />
-            {task.title} ({task.priority})
-            <button onClick={() => deleteTask(task.id)}>Delete</button>
-          </li>
-        ))}
-      </ul>
+      <TaskList
+        tasks={visibleTasks}
+        onToggle={toggleTask}
+        onDelete={deleteTask}
+      />
     </div>
   )
 }
