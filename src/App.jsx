@@ -1,4 +1,13 @@
 import { useState, useEffect } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import TaskForm from './components/TaskForm'
 import FilterTabs from './components/FilterTabs'
 import TaskList from './components/TaskList'
@@ -45,6 +54,14 @@ function App() {
     setTasks((prev) => prev.filter((task) => task.id !== id))
   }
 
+  function editTask(id, newTitle) {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id ? { ...task, title: newTitle } : task
+      )
+    )
+  }
+
   const visibleTasks = tasks.filter((task) => {
     if (filter === 'active') return !task.completed
     if (filter === 'completed') return task.completed
@@ -52,6 +69,22 @@ function App() {
   })
 
   const remainingCount = tasks.filter((task) => !task.completed).length
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setTasks((prev) => {
+      const oldIndex = prev.findIndex((task) => task.id === active.id)
+      const newIndex = prev.findIndex((task) => task.id === over.id)
+      return arrayMove(prev, oldIndex, newIndex)
+    })
+  }
 
   return (
     <div className="app">
@@ -65,11 +98,18 @@ function App() {
         remainingCount={remainingCount}
       />
 
-      <TaskList
-        tasks={visibleTasks}
-        onToggle={toggleTask}
-        onDelete={deleteTask}
-      />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <TaskList
+          tasks={visibleTasks}
+          onToggle={toggleTask}
+          onDelete={deleteTask}
+          onEdit={editTask}
+        />
+      </DndContext>
     </div>
   )
 }
